@@ -592,21 +592,25 @@ function ResultPage({ mine, result, onBack, mines }) {
 
   // ---------- SAVE AS DOCX ----------
   const handleSaveDoc = async () => {
-    const logoResp = await fetch("/logo.png");
-    const logoBlob = await logoResp.blob();
-    const logoArrayBuffer = await logoBlob.arrayBuffer();
+    try {
+    // Fetch logo from public folder - ensure /logo.png exists in your project's public folder
+      const logoResp = await fetch("/logo.png");
+      if (!logoResp.ok) throw new Error(`Logo fetch failed: ${logoResp.status}`);
 
-    const doc = new Document({
-      sections: [
-        {
-          children: [
-            new Paragraph({
-              children: [
-                new ImageRun({
-                  data: logoArrayBuffer,
-                  transformation: { width: 150, height: 150 },
-                }),
-              ],
+      const logoArrayBuffer = await logoResp.arrayBuffer();
+      const logoUint8 = new Uint8Array(logoArrayBuffer); // docx expects binary data
+
+      const doc = new Document({
+        sections: [
+          {
+            children: [
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    data: logoUint8,
+                    transformation: { width: 150, height: 150 },
+                  }),
+                ],
               alignment: "center",
             }),
             new Paragraph({ text: `Star Rating Report for ${mine.name}`, heading: "Heading1" }),
@@ -653,9 +657,14 @@ function ResultPage({ mine, result, onBack, mines }) {
       ],
     });
 
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `${mine.name}_StarRating.docx`);
-  };
+    const blob = await Packer.toBlob(doc); // returns a Blob in browser
+    saveAs(blob, `${mine.name || "report"}_StarRating.docx`);
+    toast.success("Report downloaded");
+  } catch (err) {
+    console.error("Save DOCX error:", err);
+    toast.error("Failed to generate/download report. See console for details.");
+  }
+};
 
   return (
     <div style={styles.container}>

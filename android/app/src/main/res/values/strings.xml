@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">starrating</string>
+    <string name="title_activity_main">starrating</string>
+    <string name="package_name">com.kumaravelsanjay.starrating</string>
+    <string name="custom_url_scheme">com.kumaravelsanjay.starrating</string>
+</resources>
