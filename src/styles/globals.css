@@ -1,0 +1,15 @@
+/* add these variables near :root */
+:root {
+  --primary-1: #ff5f6d;
+  --primary-2: #ffc371;
+  --btn-radius: 10px;
+}
+
+/* button */
+.btn-modern {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:10px 14px; border-radius:var(--btn-radius); border:0;
+  background:linear-gradient(90deg,var(--primary-1),var(--primary-2));
+  color:#fff; font-weight:700; cursor:pointer; transition:transform .08s, box-shadow .12s;
+}
+.btn-modern:active { transform: translateY(1px); }
