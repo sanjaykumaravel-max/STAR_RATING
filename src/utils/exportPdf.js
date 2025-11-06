@@ -77,4 +77,21 @@ export async function exportPdf(mine = {}, result = {}, options = {}) {
   }
 }
 
+export async function exportPDF(element, filename = "report.pdf") {
+  // wait all images to load
+  await Promise.all(Array.from(document.images).map(img => {
+    return img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; });
+  }));
+
+  // useCORS helps html2canvas load external images (if server allows CORS)
+  const opt = {
+    margin: 10,
+    filename,
+    html2canvas: { useCORS: true, allowTaint: false, scale: 2 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+  };
+  // html2pdf is usually loaded via import or bundle
+  await html2pdf().set(opt).from(element).save();
+}
+
 export default exportPdf;
