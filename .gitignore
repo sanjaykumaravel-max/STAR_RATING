@@ -46,6 +46,12 @@ build/Release
 
 # Dependency directories
 node_modules/
+dist/
+.env
+server/.env
+.vscode/
+*.log
+package-lock.json
 
 # Optional npm cache directory
 .npm
