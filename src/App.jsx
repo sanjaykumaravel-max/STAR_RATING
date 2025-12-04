@@ -292,13 +292,7 @@ function Dashboard({ username, onLogout, onStartRating, mines, setMines }) {
 function RatingPage({ mine, onBack, onSubmit }) {
   const [answers, setAnswers] = useState({});
   const [answersFiles, setAnswersFiles] = useState({});
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState(null);
-  const [useAiScores, setUseAiScores] = useState(false);
   const totalPoints = 100;
-
-  // removed strict requiredFields validation per request;
-  // Submit is always available now (user can leave fields empty)
 
   const handleChange = (param, value) => {
     setAnswers(prev => ({ ...prev, [param]: value }));
@@ -313,29 +307,15 @@ function RatingPage({ mine, onBack, onSubmit }) {
     reader.readAsDataURL(file);
   };
 
-  const FileUploader = ({ param }) => (
-    <span style={{ display: "inline-block", marginLeft: 10 }}>
-      <input
-        type="file"
-        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-        onChange={(e) => handleFileChange(param, e.target.files && e.target.files[0])}
-        style={{ verticalAlign: "middle" }}
-      />
-      {answersFiles[param]?.name && (
-        <small style={{ display: "block", marginTop: 4, color: "#333" }}>{answersFiles[param].name}</small>
-      )}
-    </span>
-  );
-
-  const toNumber = (v) => {
-    if (v === "high") return 5;
-    if (v === "medium") return 3;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
-
   const computeModuleScores = () => {
     const a = answers || {};
+    const toNumber = (v) => {
+      if (v === "high") return 5;
+      if (v === "medium") return 3;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
     const m1 = toNumber(a.facilities) + toNumber(a.waste) + toNumber(a.fencing) + toNumber(a.rejects) + toNumber(a.dumpyard);
     const m2 = toNumber(a.agriculture) + toNumber(a.water) + toNumber(a.energy);
     const m3 = toNumber(a.equipment) + toNumber(a.compliance) + toNumber(a.safety) + toNumber(a.vibration);
@@ -354,28 +334,6 @@ function RatingPage({ mine, onBack, onSubmit }) {
 
   const calculateScore = (moduleScores) => {
     return Object.values(moduleScores).reduce((s, v) => s + (Number(v) || 0), 0);
-  };
-
-  const handleAiSuggest = async () => {
-    try {
-      setAiLoading(true);
-      setAiSuggestion(null);
-      const { suggestScores } = await import("./api/ai");
-      const resp = await suggestScores(answers, mine || {});
-      if (resp?.ok && resp.ai) {
-        setAiSuggestion(resp.ai);
-        toast.success("AI suggestion ready");
-      } else {
-        setAiSuggestion({ error: resp?.error || "No valid suggestion", raw: resp?.raw });
-        toast.error("AI suggestion failed");
-      }
-    } catch (err) {
-      console.error("AI suggest error", err);
-      setAiSuggestion({ error: String(err) });
-      toast.error("AI suggestion error");
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   return (
@@ -688,7 +646,7 @@ function RatingPage({ mine, onBack, onSubmit }) {
         <button
           type="button"
           onClick={() => {
-            const moduleScores = useAiScores && aiSuggestion?.moduleScores ? aiSuggestion.moduleScores : computeModuleScores();
+            const moduleScores = computeModuleScores();
             const finalScore = calculateScore(moduleScores);
             onSubmit({
               answers,
@@ -702,30 +660,7 @@ function RatingPage({ mine, onBack, onSubmit }) {
         >
           Submit
         </button>
-
-        <button
-          type="button"
-          onClick={handleAiSuggest}
-          disabled={aiLoading}
-          style={{ ...styles.smallButton, background: aiLoading ? "#ddd" : "#36d1dc", color: aiLoading ? "#333" : "#fff" }}
-        >
-          {aiLoading ? "Thinking..." : "Suggest Scores (AI)"}
-        </button>
-
-        {aiSuggestion && (
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
-            <input type="checkbox" checked={useAiScores} onChange={(e) => setUseAiScores(e.target.checked)} />
-            <small>Use AI module scores when saving</small>
-          </label>
-        )}
       </div>
-
-      {aiSuggestion && (
-        <div style={{ marginTop: 12, textAlign: "left", background: "#fff", padding: 10, borderRadius: 8 }}>
-          <h4>AI Suggestion</h4>
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>{JSON.stringify(aiSuggestion, null, 2)}</pre>
-        </div>
-      )}
     </div>
   );
 }

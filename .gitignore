@@ -73,3 +73,6 @@ package-lock.json
 
 # dataconnect generated files
 .dataconnect
+
+# Local Netlify folder
+.netlify
