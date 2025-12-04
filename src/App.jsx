@@ -63,8 +63,8 @@ function Login({ onLogin }) {
 
   return (
     <div style={styles.container}>
-      <img src="/logo.png" alt="Logo" style={styles.logo} />
-      <h2>Mine Star Rating Login</h2>
+      <img src="/au-logo.png" alt="AU STAR logo" style={styles.logo} />
+      <h2>AU STAR RATING</h2>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
@@ -160,7 +160,7 @@ function Dashboard({ username, onLogout, onStartRating, mines, setMines }) {
 
   return (
     <div style={styles.container}>
-      <img src="/logo.png" alt="Logo" style={styles.logo} />
+      <img src="/au-logo.png" alt="AU STAR logo" style={styles.logo} />
       <h2>Welcome, {username}</h2>
       <button onClick={onLogout} style={styles.button}>Logout</button>
       <h3>Add/Edit Mine Details</h3>
@@ -183,8 +183,7 @@ function Dashboard({ username, onLogout, onStartRating, mines, setMines }) {
       <input
         type="number"
         name="hectares"
-        placeholder="Hectares"
-        value={mine.hectares}
+        placeholder="Area (Hectares)"
         onChange={handleChange}
         style={styles.input}
       />
@@ -199,7 +198,7 @@ function Dashboard({ username, onLogout, onStartRating, mines, setMines }) {
       <input
         type="number"
         name="leaseDuration"
-        placeholder="Lease Duration (Years)"
+        placeholder="Lease Period (Years)"
         value={mine.leaseDuration}
         onChange={handleChange}
         style={styles.input}
@@ -246,31 +245,28 @@ function Dashboard({ username, onLogout, onStartRating, mines, setMines }) {
       <ul style={styles.list}>
         {mines.map((m, idx) => (
           <li key={idx} style={styles.listItem}>
-            <span>
+            <span style={{ flex: 1, textAlign: "left" }}>
               <strong>{m.name}</strong> ({m.owner}) - {m.hectares} ha
             </span>
-            <span>
+            <span style={{ display: "flex", gap: "8px", flexWrap: "nowrap", alignItems: "center" }}>
               <button
                 type="button"
-                style={{ ...styles.smallButton, padding: "6px 12px" }}
+                style={{ ...styles.smallButton, padding: "8px 12px", minWidth: "110px" }}
                 onClick={() => onStartRating(m)}
               >
                 Start Rating
               </button>
               <button
                 type="button"
-                style={{ ...styles.smallButton, background: "#ffc371", color: "#333", marginLeft: 8 }}
-                onClick={() => {
-                  setMine(m);
-                  setEditIndex(idx);
-                  setEditScores(m.scores || {});
-                }}
+                style={{ ...styles.smallButton, background: "#ffc371", color: "#333", padding: "8px 12px", minWidth: "110px" }}
+                onClick={() => onStartRating(m)} // open rating to edit all module params
               >
-                Edit
+                Edit Rating
               </button>
+
               <button
                 type="button"
-                style={{ ...styles.smallButton, background: "#ff5f6d", color: "#fff", marginLeft: 8 }}
+                style={{ ...styles.smallButton, background: "#ff5f6d", color: "#fff", padding: "8px 12px", minWidth: "70px" }}
                 onClick={() => {
                   const updatedMines = mines.filter((_, i) => i !== idx);
                   setMines(updatedMines);
@@ -290,380 +286,655 @@ function Dashboard({ username, onLogout, onStartRating, mines, setMines }) {
 
 // ---------- RATING PAGE COMPONENT ----------
 function RatingPage({ mine, onBack, onSubmit }) {
-  const [answers, setAnswers] = useState({});
-  const [answersFiles, setAnswersFiles] = useState({});
-  const totalPoints = 100;
+    const [answers, setAnswers] = useState({});
+    const [answersFiles, setAnswersFiles] = useState({});
+    const totalPoints = 100;
 
-  const handleChange = (param, value) => {
-    setAnswers(prev => ({ ...prev, [param]: value }));
-  };
+    // Restore previous answers/proofs when reopening rating for an existing mine
+    React.useEffect(() => {
+      if (mine?.lastResult) {
+        setAnswers(mine.lastResult.answers || {});
+        setAnswersFiles(mine.lastResult.proofs || {});
+      } else {
+        setAnswers({});
+        setAnswersFiles({});
+      }
+    }, [mine]);
 
-  const handleFileChange = (param, file) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAnswersFiles(prev => ({ ...prev, [param]: { name: file.name, dataUrl: reader.result } }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const computeModuleScores = () => {
-    const a = answers || {};
-    const toNumber = (v) => {
-      if (v === "high") return 5;
-      if (v === "medium") return 3;
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
+    const handleChange = (param, value) => {
+      setAnswers(prev => ({ ...prev, [param]: value }));
     };
 
-    const m1 = toNumber(a.facilities) + toNumber(a.waste) + toNumber(a.fencing) + toNumber(a.rejects) + toNumber(a.dumpyard);
-    const m2 = toNumber(a.agriculture) + toNumber(a.water) + toNumber(a.energy);
-    const m3 = toNumber(a.equipment) + toNumber(a.compliance) + toNumber(a.safety) + toNumber(a.vibration);
-    const infra = a.infrastructure === "high" ? 5 : a.infrastructure === "medium" ? 3 : toNumber(a.infrastructure);
-    const m4 = infra + toNumber(a.greenBelt) + toNumber(a.greenExpenditure) + toNumber(a.monitoring) + toNumber(a.cer) + toNumber(a.cerExpenditure) + toNumber(a.rainwater) + toNumber(a.ecoPark) + toNumber(a.ecoRestoration);
-    const m5 = toNumber(a.ppeWorkers) + toNumber(a.explosives) + toNumber(a.nonExplosive) + toNumber(a.pme) + toNumber(a.it) + toNumber(a.hazardous) + toNumber(a.dustSuppression) + toNumber(a.rescue);
+    const handleFileChange = (param, file) => {
+      if (!file) return;
+      
+      const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`File ${file.name} exceeds 1MB limit. Please upload a smaller file.`);
+        return;
+      }
 
-    return {
-      "Module I": m1,
-      "Module II": m2,
-      "Module III": m3,
-      "Module IV": m4,
-      "Module V": m5,
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAnswersFiles(prev => ({ ...prev, [param]: { name: file.name, dataUrl: reader.result } }));
+        toast.success(`${file.name} uploaded successfully!`);
+      };
+      reader.onerror = () => {
+        toast.error(`Failed to read file ${file.name}`);
+      };
+      reader.readAsDataURL(file);
     };
-  };
 
-  const calculateScore = (moduleScores) => {
-    return Object.values(moduleScores).reduce((s, v) => s + (Number(v) || 0), 0);
-  };
+    const handleRemoveFile = (param) => {
+      setAnswersFiles(prev => {
+        const copy = { ...prev };
+        delete copy[param];
+        return copy;
+      });
+      toast.info("Proof removed");
+    };
 
-  return (
-    <div style={styles.container}>
-      <img src="/logo.png" alt="Logo" style={styles.logo} />
-      <h2>Star Rating for {mine.name}</h2>
-      <button type="button" onClick={onBack} style={{ ...styles.smallButton, marginRight: 8 }}>Back</button>
-
-      {/* ---------- RATING FORM ---------- */}
-      <h3>MODULE I: CONSTRUCTION, OPERATION OR DECOMMISSIONING (Max:15 pts)</h3>
-      <label style={{ display: "block", marginBottom: 8 }}>
-       Facilities for storage of goods or Materials (Yes:3, No:0)
-       (Remarks: Check if proper storage sheds exist for safe stacking of materials)
-        <select onChange={(e) => handleChange("facilities", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="facilities" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Facilities for treatment or disposal of solid waste or liquid effluents (Yes:3, No:0)
-        (Remarks: Ensure there is a system for handling mine water, sewage, or other effluents)
-        <select onChange={(e) => handleChange("waste", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="waste" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Fencing has done (Yes:3, No:0)
-        (Remarks: Prevents unauthorized entry and ensures safety)
-        <select onChange={(e) => handleChange("fencing", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="fencing" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-       Rejects (blocks having cracks) properly dumped in a stable ground and adequate environment (Yes:3, No:0)
-       (Remarks: Check whether quarry waste is stored or backfilled in a scientific way)
-        <select onChange={(e) => handleChange("rejects", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="rejects" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-       Garland drains has done (Yes:3, No:0)
-       (Remarks: Validity of approved closure plan and initial implementation must be verified)
-        <select onChange={(e) => handleChange("dumpyard", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="dumpyard" />
-      </label>
-
-      <h3>MODULE II: USE OF NATURAL RESOURCES FOR CONSTRUCTION OR OPERATION (Max:12 pts)</h3>
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Land especially used for agricultural purposes (ha) (Yes:3, No:0)
-        (Remarks: Using agricultural land for mining is discouraged; should be avoided)
-        <select onChange={(e) => handleChange("agriculture", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="agriculture" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Water (expected source & competing users) unit: KLD
-        (Remarks: Check if water abstraction is within permissible limits and does not affect local users)
-        <select onChange={(e) => handleChange("water", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">≤50% / NA</option>
-          <option value="3">50–80%</option>
-          <option value="5">80–100%</option>
-        </select>
-        <FileUploader param="water" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Energy including electricity and fuels
-        (Remarks: Preference for renewable energy (solar) indicates better sustainability)
-        <select onChange={(e) => handleChange("energy", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">Diesel Fuel</option>
-          <option value="2">Electricity</option>
-          <option value="4">Solar Energy</option>
-        </select>
-        <FileUploader param="energy" />
-      </label>
-
-      <h3>MODULE III: GENERATION OF NOISE AND VIBRATION, AND EMISSIONS AND RISKS (Max:12 pts)</h3>
-      <label style={{ display: "block", marginBottom: 8 }}>
-        From operation of equipment e.g. engines, cranes, HEMM (within a permissible limit) (Yes:3, No:0)
-        (Remarks: Noise and vibration levels should comply with CPCB/DGMS norms)
-        <select onChange={(e) => handleChange("equipment", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="equipment" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Compliance reporting of environmental parameters (air, water, etc.) (Yes:3, No:0)
-        (Remarks: Ensure reports are regularly submitted as per statutory requirement)
-        <select onChange={(e) => handleChange("compliance", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="compliance" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Mines safety precautions followed in controlling the noise, vibration, etc. (Yes:3, No:0)
-        (Remarks: Adequate signage, safety drills, and protective gear must be in place)
-        <select onChange={(e) => handleChange("safety", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="safety" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Whole body vibration test has been carried out while using HEMMs (Yes:3, No:0)
-        (Remarks: Check if operators undergo periodic vibration exposure tests)
-        <select onChange={(e) => handleChange("vibration", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="vibration" />
-      </label>
-
-      <h3>MODULE IV: POTENTIAL FOR CUMULATIVE IMPACTS WITH OTHER EXISTING OR PLANNED ACTIVITIES IN THE LOCALITY (Max:33 pts)</h3>
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Development of infrastructure
-        (Remarks: Check whether nearby development activities are aligned with EIA norms)
-        <select onChange={(e) => handleChange("infrastructure", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">≤50%</option>
-          <option value="3">50–80%</option>
-          <option value="high">80–100%</option>
-        </select>
-        <FileUploader param="infrastructure" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Green belt development activities (If Yes, mention the activities) (Yes:3, No:0)
-        (Remarks: Mines must develop plantation along boundaries and haul roads)
-        <select onChange={(e) => handleChange("greenBelt", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="greenBelt" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Expenditure on green belt development 
-        (Remarks: Verify plantation expenditure and survival rate of saplings)
-        <select onChange={(e) => handleChange("greenExpenditure", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="1">80%</option>
-          <option value="5">100%</option>
-        </select>
-        <FileUploader param="greenExpenditure" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Environment Monitoring Programme has formulated (Yes:3, No:0)
-        (Remarks :Periodic air, water, and noise quality checks must be carried out)
-        <select onChange={(e) => handleChange("monitoring", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="monitoring" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Corporate Environmental Responsibility (If yes, mention the activities) (Yes:3, No:0)
-        (Remarks: Verify CSR activities specific to environmental welfare)
-        <select onChange={(e) => handleChange("cer", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="cer" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Expenditure on CER
-        (Remarks: Funds must be utilized for environmental/community development.)
-        <select onChange={(e) => handleChange("cerExpenditure", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="1">80%</option>
-          <option value="5">100%</option>
-        </select>
-        <FileUploader param="cerExpenditure" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        RWH (Rain Water Harvesting) structure has maintained (Yes:3, No:0)
-        (Remarks: Check if proper catch pits, tanks, or harvesting systems exist) 
-        <select onChange={(e) => handleChange("rainwater", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="rainwater" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Eco-parks have been opened or not in the surrounding nearby location (Yes:3, No:0)
-        (Remarks: Land reclaimed for eco-tourism or biodiversity purposes)
-        <select onChange={(e) => handleChange("ecoPark", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="ecoPark" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Eco-restoration including the mine closure plan has done (Yes:3, No:0)
-        (Remarks: Rehabilitation of mined-out areas as per closure plan)
-        <select onChange={(e) => handleChange("ecoRestoration", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="ecoRestoration" />
-      </label>
-
-      <h3>MODULE V: HEALTH SAFETY AND WELFARE OF WORKERS (Max:28 pts)</h3>
-      <label style={{ display: "block", marginBottom: 8 }}>
-        The workers on the site should be provided with the required protective equipment such as ear muffs, helmet, etc. (Yes:3, No:0)
-        (Remarks: PPE like helmets, ear muffs, masks, gloves must be issued and used)
-        <select onChange={(e) => handleChange("ppeWorkers", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="ppeWorkers" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Explosives should be stored in magazines in isolated place specified and approved by the explosives department used in accordance with MMDR act 1961 (NA:3, Yes:0, No:0)
-        (Remarks: Storage magazine must comply with DGMS norms)
-        <select onChange={(e) => handleChange("explosives", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">Yes / No</option>
-          <option value="3">NA</option>
-        </select>
-        <FileUploader param="explosives" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Usage of non-explosive & innovative techniques such as cutting saw fo¬r block extraction (Yes:4, No:0)
-        (Remarks: Saw cutting and wire cutting reduce environmental and safety hazards)
-        <select onChange={(e) => handleChange("nonExplosive", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="4">Yes</option>
-        </select>
-        <FileUploader param="nonExplosive" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        %of total employment for whom Periodical Medical Examination (PME)has been done as per Mine Rules 1955
-        (Remarks: Ensure 100% workers undergo PME every year)
-        <select onChange={(e) => handleChange("pme", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">≤50%</option>
-          <option value="1">50–100%</option>
-          <option value="3">100%</option>
-        </select>
-        <FileUploader param="pme" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        IT initiatives to check pilferage such as CCTV camera, link with state authorities, usage of satellite images (Yes:3, No:0)
-        (Remarks: Improves safety, monitoring, and compliance reporting)
-        <select onChange={(e) => handleChange("it", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="3">Yes</option>
-        </select>
-        <FileUploader param="it" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Use of substances or materials, which are hazardous (as per MSIHC rules) to human health or the environment (flora, fauna, and water supplies) (Yes:0, No:2)
-        (Remarks: Mines must avoid usage of chemicals classified under MSIHC Rules)
-        <select onChange={(e) => handleChange("hazardous", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">Yes</option>
-          <option value="2">No</option>
-        </select>
-        <FileUploader param="hazardous" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Dust suppression measures within quarry and haul roads (Yes:5, No:0)
-        (Remarks: Water sprinklers or chemical suppressants must be in place)
-        <select onChange={(e) => handleChange("dustSuppression", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="5">Yes</option>
-        </select>
-        <FileUploader param="dustSuppression" />
-      </label>
-
-      <label style={{ display: "block", marginBottom: 8 }}>
-        Provision to tackle mine hazards /rescue operation (Yes:5, No:0)
-        (Remarks: Adequate firefighting, rescue equipment, and trained personnel must be available)
-        <select onChange={(e) => handleChange("rescue", e.target.value)} style={{ marginLeft: 8 }}>
-          <option value="0">No</option>
-          <option value="5">Yes</option>
-        </select>
-        <FileUploader param="rescue" />
-      </label>
-
-      <div style={{ marginTop: 12 }}>
-        <button
-          type="button"
-          onClick={() => {
-            const moduleScores = computeModuleScores();
-            const finalScore = calculateScore(moduleScores);
-            onSubmit({
-              answers,
-              proofs: answersFiles,
-              score: finalScore,
-              totalPoints,
-              moduleScores,
-            });
+    const FileUploader = ({ param }) => (
+      <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
+        <input
+          type="file"
+          accept="image/*,application/pdf"
+          title="Upload proof (Max 1 MB)"
+          style={{ fontSize: "0.9rem" }}
+          onChange={(e) => {
+            const f = e.target.files && e.target.files[0];
+            if (f) {
+              handleFileChange(param, f);
+            }
           }}
-          style={styles.button}
-        >
-          Submit
-        </button>
+        />
+        <span style={{ fontSize: "0.8rem", color: "#666", whiteSpace: "nowrap" }}>Max 1 MB</span>
+      </label>
+    );
+
+    const computeModuleScores = () => {
+      const a = answers || {};
+      const toNumber = (v) => {
+        if (v === "high") return 5;
+        if (v === "medium") return 3;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+      };
+
+      const m1 = toNumber(a.facilities) + toNumber(a.waste) + toNumber(a.fencing) + toNumber(a.rejects) + toNumber(a.dumpyard);
+      const m2 = toNumber(a.agriculture) + toNumber(a.water) + toNumber(a.energy);
+      const m3 = toNumber(a.equipment) + toNumber(a.compliance) + toNumber(a.safety) + toNumber(a.vibration);
+      const infra = a.infrastructure === "high" ? 5 : a.infrastructure === "medium" ? 3 : toNumber(a.infrastructure);
+      const m4 = infra + toNumber(a.greenBelt) + toNumber(a.greenExpenditure) + toNumber(a.monitoring) + toNumber(a.cer) + toNumber(a.cerExpenditure) + toNumber(a.rainwater) + toNumber(a.ecoPark) + toNumber(a.ecoRestoration);
+      const m5 = toNumber(a.ppeWorkers) + toNumber(a.explosives) + toNumber(a.nonExplosive) + toNumber(a.pme) + toNumber(a.it) + toNumber(a.hazardous) + toNumber(a.dustSuppression) + toNumber(a.rescue);
+
+      return {
+        "Module I": m1,
+        "Module II": m2,
+        "Module III": m3,
+        "Module IV": m4,
+        "Module V": m5,
+      };
+    };
+
+    const calculateScore = (moduleScores) => {
+      return Object.values(moduleScores).reduce((s, v) => s + (Number(v) || 0), 0);
+    };
+
+    return (
+      <div style={styles.container}>
+        <img src="/au-logo.png" alt="AU STAR logo" style={styles.logo} />
+        <h2>Star Rating for {mine.name}</h2>
+        <button type="button" onClick={onBack} style={{ ...styles.smallButton, marginRight: 8 }}>Back</button>
+
+        {/* ---------- MODULE I ---------- */}
+        <h3>MODULE I: CONSTRUCTION, OPERATION OR DECOMMISSIONING (Max:15 pts)</h3>
+        <label style={{ display: "block", marginBottom: 8 }}>
+         Facilities for storage of goods or Materials (Yes:3, No:0)
+         (Remarks: Check if proper storage sheds exist for safe stacking of materials)
+          <select value={answers.facilities ?? "0"} onChange={(e) => handleChange("facilities", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="facilities" />
+          {answersFiles.facilities && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.facilities.name} 
+              <button type="button" onClick={() => handleRemoveFile("facilities")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Facilities for treatment or disposal of solid waste or liquid effluents (Yes:3, No:0)
+          (Remarks: Ensure there is a system for handling mine water, sewage, or other effluents)
+          <select value={answers.waste ?? "0"} onChange={(e) => handleChange("waste", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="waste" />
+          {answersFiles.waste && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.waste.name} 
+              <button type="button" onClick={() => handleRemoveFile("waste")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Fencing has done (Yes:3, No:0)
+          (Remarks: Prevents unauthorized entry and ensures safety)
+          <select value={answers.fencing ?? "0"} onChange={(e) => handleChange("fencing", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="fencing" />
+          {answersFiles.fencing && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.fencing.name} 
+              <button type="button" onClick={() => handleRemoveFile("fencing")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+         Rejects (blocks having cracks) properly dumped in a stable ground and adequate environment (Yes:3, No:0)
+         (Remarks: Check whether quarry waste is stored or backfilled in a scientific way)
+          <select value={answers.rejects ?? "0"} onChange={(e) => handleChange("rejects", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="rejects" />
+          {answersFiles.rejects && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.rejects.name} 
+              <button type="button" onClick={() => handleRemoveFile("rejects")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+         Garland drains has done (Yes:3, No:0)
+         (Remarks: Validity of approved closure plan and initial implementation must be verified)
+          <select value={answers.dumpyard ?? "0"} onChange={(e) => handleChange("dumpyard", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="dumpyard" />
+          {answersFiles.dumpyard && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.dumpyard.name} 
+              <button type="button" onClick={() => handleRemoveFile("dumpyard")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        {/* ---------- MODULE II ---------- */}
+        <h3>MODULE II: USE OF NATURAL RESOURCES FOR CONSTRUCTION OR OPERATION (Max:12 pts)</h3>
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Land especially used for agricultural purposes (ha) (Yes:3, No:0)
+          (Remarks: Using agricultural land for mining is discouraged; should be avoided)
+          <select value={answers.agriculture ?? "0"} onChange={(e) => handleChange("agriculture", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="agriculture" />
+          {answersFiles.agriculture && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.agriculture.name} 
+              <button type="button" onClick={() => handleRemoveFile("agriculture")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Water (expected source & competing users) unit: KLD
+          (Remarks: Check if water abstraction is within permissible limits and does not affect local users)
+          <select value={answers.water ?? "0"} onChange={(e) => handleChange("water", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">≤50% / NA</option>
+            <option value="3">50–80%</option>
+            <option value="5">80–100%</option>
+          </select>
+          <FileUploader param="water" />
+          {answersFiles.water && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.water.name} 
+              <button type="button" onClick={() => handleRemoveFile("water")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Energy including electricity and fuels
+          (Remarks: Preference for renewable energy (solar) indicates better sustainability)
+          <select value={answers.energy ?? "0"} onChange={(e) => handleChange("energy", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">Diesel Fuel</option>
+            <option value="2">Electricity</option>
+            <option value="4">Solar Energy</option>
+          </select>
+          <FileUploader param="energy" />
+          {answersFiles.energy && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.energy.name} 
+              <button type="button" onClick={() => handleRemoveFile("energy")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        {/* ---------- MODULE III ---------- */}
+        <h3>MODULE III: GENERATION OF NOISE AND VIBRATION, AND EMISSIONS AND RISKS (Max:12 pts)</h3>
+        <label style={{ display: "block", marginBottom: 8 }}>
+          From operation of equipment e.g. engines, cranes, HEMM (within a permissible limit) (Yes:3, No:0)
+          (Remarks: Noise and vibration levels should comply with CPCB/DGMS norms)
+          <select value={answers.equipment ?? "0"} onChange={(e) => handleChange("equipment", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="equipment" />
+          {answersFiles.equipment && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.equipment.name} 
+              <button type="button" onClick={() => handleRemoveFile("equipment")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Compliance reporting of environmental parameters (air, water, etc.) (Yes:3, No:0)
+          (Remarks: Ensure reports are regularly submitted as per statutory requirement)
+          <select value={answers.compliance ?? "0"} onChange={(e) => handleChange("compliance", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="compliance" />
+          {answersFiles.compliance && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.compliance.name} 
+              <button type="button" onClick={() => handleRemoveFile("compliance")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Mines safety precautions followed in controlling the noise, vibration, etc. (Yes:3, No:0)
+          (Remarks: Adequate signage, safety drills, and protective gear must be in place)
+          <select value={answers.safety ?? "0"} onChange={(e) => handleChange("safety", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="safety" />
+          {answersFiles.safety && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.safety.name} 
+              <button type="button" onClick={() => handleRemoveFile("safety")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Whole body vibration test has been carried out while using HEMMs (Yes:3, No:0)
+          (Remarks: Check if operators undergo periodic vibration exposure tests)
+          <select value={answers.vibration ?? "0"} onChange={(e) => handleChange("vibration", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="vibration" />
+          {answersFiles.vibration && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.vibration.name} 
+              <button type="button" onClick={() => handleRemoveFile("vibration")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        {/* ---------- MODULE IV ---------- */}
+        <h3>MODULE IV: POTENTIAL FOR CUMULATIVE IMPACTS WITH OTHER EXISTING OR PLANNED ACTIVITIES IN THE LOCALITY (Max:33 pts)</h3>
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Development of infrastructure
+          (Remarks: Check whether nearby development activities are aligned with EIA norms)
+          <select value={answers.infrastructure ?? "0"} onChange={(e) => handleChange("infrastructure", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">≤50%</option>
+            <option value="3">50–80%</option>
+            <option value="high">80–100%</option>
+          </select>
+          <FileUploader param="infrastructure" />
+          {answersFiles.infrastructure && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.infrastructure.name} 
+              <button type="button" onClick={() => handleRemoveFile("infrastructure")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Green belt development activities (If Yes, mention the activities) (Yes:3, No:0)
+          (Remarks: Mines must develop plantation along boundaries and haul roads)
+          <select value={answers.greenBelt ?? "0"} onChange={(e) => handleChange("greenBelt", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="greenBelt" />
+          {answersFiles.greenBelt && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.greenBelt.name} 
+              <button type="button" onClick={() => handleRemoveFile("greenBelt")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Expenditure on green belt development 
+          (Remarks: Verify plantation expenditure and survival rate of saplings)
+          <select value={answers.greenExpenditure ?? "1"} onChange={(e) => handleChange("greenExpenditure", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="1">80%</option>
+            <option value="5">100%</option>
+          </select>
+          <FileUploader param="greenExpenditure" />
+          {answersFiles.greenExpenditure && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.greenExpenditure.name} 
+              <button type="button" onClick={() => handleRemoveFile("greenExpenditure")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Environment Monitoring Programme has formulated (Yes:3, No:0)
+          (Remarks :Periodic air, water, and noise quality checks must be carried out)
+          <select value={answers.monitoring ?? "0"} onChange={(e) => handleChange("monitoring", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="monitoring" />
+          {answersFiles.monitoring && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.monitoring.name} 
+              <button type="button" onClick={() => handleRemoveFile("monitoring")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Corporate Environmental Responsibility (If yes, mention the activities) (Yes:3, No:0)
+          (Remarks: Verify CSR activities specific to environmental welfare)
+          <select value={answers.cer ?? "0"} onChange={(e) => handleChange("cer", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="cer" />
+          {answersFiles.cer && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.cer.name} 
+              <button type="button" onClick={() => handleRemoveFile("cer")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Expenditure on CER
+          (Remarks: Funds must be utilized for environmental/community development.)
+          <select value={answers.cerExpenditure ?? "1"} onChange={(e) => handleChange("cerExpenditure", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="1">80%</option>
+            <option value="5">100%</option>
+          </select>
+          <FileUploader param="cerExpenditure" />
+          {answersFiles.cerExpenditure && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.cerExpenditure.name} 
+              <button type="button" onClick={() => handleRemoveFile("cerExpenditure")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          RWH (Rain Water Harvesting) structure has maintained (Yes:3, No:0)
+          (Remarks: Check if proper catch pits, tanks, or harvesting systems exist) 
+          <select value={answers.rainwater ?? "0"} onChange={(e) => handleChange("rainwater", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="rainwater" />
+          {answersFiles.rainwater && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.rainwater.name} 
+              <button type="button" onClick={() => handleRemoveFile("rainwater")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Eco-parks have been opened or not in the surrounding nearby location (Yes:3, No:0)
+          (Remarks: Land reclaimed for eco-tourism or biodiversity purposes)
+          <select value={answers.ecoPark ?? "0"} onChange={(e) => handleChange("ecoPark", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="ecoPark" />
+          {answersFiles.ecoPark && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.ecoPark.name} 
+              <button type="button" onClick={() => handleRemoveFile("ecoPark")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Eco-restoration including the mine closure plan has done (Yes:3, No:0)
+          (Remarks: Rehabilitation of mined-out areas as per closure plan)
+          <select value={answers.ecoRestoration ?? "0"} onChange={(e) => handleChange("ecoRestoration", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="ecoRestoration" />
+          {answersFiles.ecoRestoration && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.ecoRestoration.name} 
+              <button type="button" onClick={() => handleRemoveFile("ecoRestoration")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        {/* ---------- MODULE V ---------- */}
+        <h3>MODULE V: HEALTH SAFETY AND WELFARE OF WORKERS (Max:28 pts)</h3>
+        <label style={{ display: "block", marginBottom: 8 }}>
+          The workers on the site should be provided with the required protective equipment such as ear muffs, helmet, etc. (Yes:3, No:0)
+          (Remarks: PPE like helmets, ear muffs, masks, gloves must be issued and used)
+          <select value={answers.ppeWorkers ?? "0"} onChange={(e) => handleChange("ppeWorkers", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="ppeWorkers" />
+          {answersFiles.ppeWorkers && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.ppeWorkers.name} 
+              <button type="button" onClick={() => handleRemoveFile("ppeWorkers")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Explosives should be stored in magazines in isolated place specified and approved by the explosives department used in accordance with MMDR act 1961 (NA:3, Yes:0, No:0)
+          (Remarks: Storage magazine must comply with DGMS norms)
+          <select value={answers.explosives ?? "0"} onChange={(e) => handleChange("explosives", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">Yes / No</option>
+            <option value="3">NA</option>
+          </select>
+          <FileUploader param="explosives" />
+          {answersFiles.explosives && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.explosives.name} 
+              <button type="button" onClick={() => handleRemoveFile("explosives")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Usage of non-explosive & innovative techniques such as cutting saw fo¬r block extraction (Yes:4, No:0)
+          (Remarks: Saw cutting and wire cutting reduce environmental and safety hazards)
+          <select value={answers.nonExplosive ?? "0"} onChange={(e) => handleChange("nonExplosive", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="4">Yes</option>
+          </select>
+          <FileUploader param="nonExplosive" />
+          {answersFiles.nonExplosive && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.nonExplosive.name} 
+              <button type="button" onClick={() => handleRemoveFile("nonExplosive")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          %of total employment for whom Periodical Medical Examination (PME)has been done as per Mine Rules 1955
+          (Remarks: Ensure 100% workers undergo PME every year)
+          <select value={answers.pme ?? "0"} onChange={(e) => handleChange("pme", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">≤50%</option>
+            <option value="1">50–100%</option>
+            <option value="3">100%</option>
+          </select>
+          <FileUploader param="pme" />
+          {answersFiles.pme && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.pme.name} 
+              <button type="button" onClick={() => handleRemoveFile("pme")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          IT initiatives to check pilferage such as CCTV camera, link with state authorities, usage of satellite images (Yes:3, No:0)
+          (Remarks: Improves safety, monitoring, and compliance reporting)
+          <select value={answers.it ?? "0"} onChange={(e) => handleChange("it", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="3">Yes</option>
+          </select>
+          <FileUploader param="it" />
+          {answersFiles.it && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.it.name} 
+              <button type="button" onClick={() => handleRemoveFile("it")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Use of substances or materials, which are hazardous (as per MSIHC rules) to human health or the environment (flora, fauna, and water supplies) (Yes:0, No:2)
+          (Remarks: Mines must avoid usage of chemicals classified under MSIHC Rules)
+          <select value={answers.hazardous ?? "0"} onChange={(e) => handleChange("hazardous", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">Yes</option>
+            <option value="2">No</option>
+          </select>
+          <FileUploader param="hazardous" />
+          {answersFiles.hazardous && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.hazardous.name} 
+              <button type="button" onClick={() => handleRemoveFile("hazardous")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Dust suppression measures within quarry and haul roads (Yes:5, No:0)
+          (Remarks: Water sprinklers or chemical suppressants must be in place)
+          <select value={answers.dustSuppression ?? "0"} onChange={(e) => handleChange("dustSuppression", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="5">Yes</option>
+          </select>
+          <FileUploader param="dustSuppression" />
+          {answersFiles.dustSuppression && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.dustSuppression.name} 
+              <button type="button" onClick={() => handleRemoveFile("dustSuppression")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        <label style={{ display: "block", marginBottom: 8 }}>
+          Provision to tackle mine hazards /rescue operation (Yes:5, No:0)
+          (Remarks: Adequate firefighting, rescue equipment, and trained personnel must be available)
+          <select value={answers.rescue ?? "0"} onChange={(e) => handleChange("rescue", e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="0">No</option>
+            <option value="5">Yes</option>
+          </select>
+          <FileUploader param="rescue" />
+          {answersFiles.rescue && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "#666" }}>
+              {answersFiles.rescue.name} 
+              <button type="button" onClick={() => handleRemoveFile("rescue")} style={{ marginLeft: 6, ...styles.smallButton, padding: "4px 8px", fontSize: "0.75rem" }}>Remove</button>
+            </span>
+          )}
+        </label>
+
+        {/* SUBMIT */}
+        <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => {
+              const moduleScores = computeModuleScores();
+              const finalScore = calculateScore(moduleScores);
+              onSubmit({
+                answers,
+                proofs: answersFiles,
+                score: finalScore,
+                totalPoints,
+                moduleScores,
+              });
+            }}
+            style={styles.button}
+          >
+            Submit Rating
+          </button>
+          <button type="button" onClick={onBack} style={styles.button}>
+            Back
+          </button>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+  
+// ADD: Module config with full names and max points
+const MODULE_CONFIG = {
+  "Module I": { fullName: "CONSTRUCTION, OPERATION OR DECOMMISSIONING", maxPoints: 15 },
+  "Module II": { fullName: "USE OF NATURAL RESOURCES FOR CONSTRUCTION OR OPERATION", maxPoints: 12 },
+  "Module III": { fullName: "GENERATION OF NOISE AND VIBRATION, AND EMISSIONS AND RISKS", maxPoints: 12 },
+  "Module IV": { fullName: "POTENTIAL FOR CUMULATIVE IMPACTS WITH OTHER EXISTING OR PLANNED ACTIVITIES IN THE LOCALITY", maxPoints: 33 },
+  "Module V": { fullName: "HEALTH SAFETY AND WELFARE OF WORKERS", maxPoints: 28 },
+};
+
+// ADD: improvement suggestions based on scored module
+const getImprovementSuggestions = (moduleKey, scored, maxPoints) => {
+  const percentage = (scored / maxPoints) * 100;
+  const suggestions = {
+    "Module I": {
+      low: "Improve storage facilities for materials and ensure proper waste management systems are in place.",
+      medium: "Complete fencing around the quarry and stabilize reject dumps on suitable ground.",
+      high: "Maintain existing infrastructure and focus on other modules."
+    },
+    "Module II": {
+      low: "Avoid using agricultural land; switch to renewable energy sources like solar power.",
+      medium: "Implement water conservation measures and reduce dependency on natural resources.",
+      high: "Continue sustainable resource management practices."
+    },
+    "Module III": {
+      low: "Conduct noise and vibration tests; implement compliance reporting for environmental parameters.",
+      medium: "Ensure all safety precautions are documented and workers are trained.",
+      high: "Maintain current standards and periodic monitoring."
+    },
+    "Module IV": {
+      low: "Develop green belt, establish eco-parks, and formulate an environment monitoring programme.",
+      medium: "Increase green expenditure and implement CSR activities for community welfare.",
+      high: "Continue ecological restoration and maintain existing initiatives."
+    },
+    "Module V": {
+      low: "Provide PPE to all workers, conduct periodic medical exams, and install dust suppression systems.",
+      medium: "Implement IT initiatives (CCTV) and enhance rescue operation capabilities.",
+      high: "Maintain safety standards and worker health programs."
+    }
+  };
+
+  const level = percentage < 50 ? "low" : percentage < 75 ? "medium" : "high";
+  return suggestions[moduleKey]?.[level] || "";
+};
 
 // ---------- RESULT PAGE COMPONENT ----------
 function ResultPage({ mine, result = {}, onBack, mines = [] }) {
@@ -676,6 +947,21 @@ function ResultPage({ mine, result = {}, onBack, mines = [] }) {
 
   const moduleScores = result.moduleScores || (mine && mine.scores) || {};
   const moduleNames = ["Module I", "Module II", "Module III", "Module IV", "Module V"];
+  
+  // ADD: prepare data for stacked bar chart (obtained vs. remaining)
+  const moduleChartData = moduleNames.map(mod => {
+    const maxPts = MODULE_CONFIG[mod].maxPoints;
+    const obtained = moduleScores[mod] || 0;
+    const remaining = Math.max(0, maxPts - obtained);
+    return {
+      module: mod.replace("Module ", "M"),
+      obtained: Number(obtained),
+      remaining: Number(remaining),
+      maxPoints: maxPts,
+      percentage: ((obtained / maxPts) * 100).toFixed(1),
+    };
+  });
+
   const minesWithScores = (mines || []).map(m => ({ ...m, scores: m.scores || { "Module I": 0, "Module II": 0, "Module III": 0, "Module IV": 0, "Module V": 0 } }));
   const moduleAverages = moduleNames.map(mod => ({
     module: mod,
@@ -780,24 +1066,34 @@ function ResultPage({ mine, result = {}, onBack, mines = [] }) {
 
   return (
     <div style={styles.container}>
-      <img src="/logo.png" alt="logo" style={styles.logo} />
+      <img src="/au-logo.png" alt="AU STAR logo" style={styles.logo} />
       <h2>Result — {mine.name}</h2>
       <h3>Score: {score} / {totalPoints}</h3>
       <p>Percentage: {percentage}% — {star}</p>
 
-      <div style={{ marginTop: 12 }}>
-        <button type="button" style={styles.smallButton} onClick={exportPDF} disabled={isExporting}>
-          {isExporting ? "Exporting…" : "Save as PDF"}
+      {/* UPDATED: Export & action buttons in aligned grid */}
+      <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+        <button type="button" style={styles.button} onClick={exportPDF} disabled={isExporting}>
+          {isExporting ? "Exporting PDF…" : "Save as PDF"}
         </button>
-        <button type="button" style={styles.smallButton} onClick={exportDOCX}>Save as DOCX</button>
-        <button type="button" style={styles.smallButton} onClick={exportTXT}>Save as Notes</button>
-        <button type="button" style={styles.smallButton} onClick={exportCSV}>Save as CSV</button>
-        <button type="button" style={styles.smallButton} onClick={exportHTML}>Save as HTML</button>
-        <button type="button" style={{ ...styles.smallButton, marginLeft: 8 }} onClick={handleDownloadZip}>Download Proofs (ZIP)</button>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <button type="button" style={{ ...styles.smallButton }} onClick={onBack}>Back to Dashboard</button>
+        <button type="button" style={styles.button} onClick={exportDOCX}>
+          Save as DOCX
+        </button>
+        <button type="button" style={styles.button} onClick={exportTXT}>
+          Save as Notes
+        </button>
+        <button type="button" style={styles.button} onClick={exportCSV}>
+          Save as CSV
+        </button>
+        <button type="button" style={styles.button} onClick={exportHTML}>
+          Save as HTML
+        </button>
+        <button type="button" style={styles.button} onClick={handleDownloadZip}>
+          Download Proofs (ZIP)
+        </button>
+        <button type="button" style={styles.button} onClick={onBack}>
+          Back to Dashboard
+        </button>
       </div>
 
       <h3 style={{ marginTop: 20 }}>Uploaded Proofs</h3>
@@ -818,20 +1114,22 @@ function ResultPage({ mine, result = {}, onBack, mines = [] }) {
 
       <h3 style={{ marginTop: 20 }}>Charts & Analytics</h3>
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
-        <div style={{ width: 340, background: "#fff8", borderRadius: 12, padding: 12 }}>
-          <h4>Avg Module Scores</h4>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={moduleAverages}>
+        <div style={{ width: 360, background: "#fff8", borderRadius: 12, padding: 12 }}>
+          <h4>Module Points: Obtained vs. Remaining</h4>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={moduleChartData}>
               <XAxis dataKey="module" />
               <YAxis />
-              <Tooltip />
-              <Bar dataKey="avg" fill="#ff5f6d" />
+              <Tooltip formatter={(v) => `${v} pts`} />
+              <Bar dataKey="obtained" stackId="a" fill="#36d1dc" name="Obtained" />
+              <Bar dataKey="remaining" stackId="a" fill="#b3e5fc" name="Remaining" />
+              <Legend />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <div style={{ width: 260, background: "#fff8", borderRadius: 12, padding: 12 }}>
           <h4>Top 3 Mines</h4>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie data={topMines} dataKey="total" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
                 {topMines.map((entry, idx) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}
@@ -842,14 +1140,73 @@ function ResultPage({ mine, result = {}, onBack, mines = [] }) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* UPDATED: Module Scores Summary with full names and improvement suggestions */}
+      <h3 style={{ marginTop: 24 }}>Module Scores Summary & Improvement Areas</h3>
+      <div style={{ textAlign: "left", maxWidth: 720, margin: "16px auto" }}>
+        {moduleNames.map((mod) => {
+          const scored = moduleScores[mod] || 0;
+          const maxPts = MODULE_CONFIG[mod].maxPoints;
+          const percentage = ((scored / maxPts) * 100).toFixed(1);
+          const suggestion = getImprovementSuggestions(mod, scored, maxPts);
+          const isLow = percentage < 50;
+
+          return (
+            <div
+              key={mod}
+              style={{
+                background: isLow ? "#fff5f5" : "#f5f5f5",
+                padding: 14,
+                margin: "12px 0",
+                borderRadius: 10,
+                border: isLow ? "2px solid #ff5f6d" : "1px solid #e0e0e0",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div>
+                  <strong style={{ fontSize: 15 }}>{mod}</strong>
+                  <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                    {MODULE_CONFIG[mod].fullName}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 16, fontWeight: "bold", color: isLow ? "#ff5f6d" : "#36d1dc" }}>
+                    {scored} / {maxPts}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#999" }}>({percentage}%)</div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ background: "#e0e0e0", height: 8, borderRadius: 4, overflow: "hidden", marginBottom: 10 }}>
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${percentage}%`,
+                    background: isLow ? "#ff5f6d" : "#36d1dc",
+                    transition: "width 0.3s",
+                  }}
+                />
+              </div>
+
+              {/* Improvement suggestion */}
+              {suggestion && (
+                <div style={{ background: "#fff", padding: 10, borderRadius: 6, fontSize: 13, color: "#333", borderLeft: `4px solid ${isLow ? "#ff5f6d" : "#36d1dc"}` }}>
+                  <strong style={{ color: isLow ? "#ff5f6d" : "#36d1dc" }}>💡 Suggestion:</strong> {suggestion}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
-}      
+}
 
 // ---------- STYLES ----------
 const styles = {
   container: {
-    maxWidth: "600px",
+    maxWidth: "800px",
     margin: "40px auto",
     padding: "36px 28px",
     borderRadius: "22px",
@@ -888,22 +1245,22 @@ const styles = {
   },
 
   button: {
-    marginTop: "8px",
-    padding: "8px 14px",      // smaller padding
-    borderRadius: "8px",      // slightly smaller radius
+    padding: "10px 16px",
+    borderRadius: "8px",
     border: "none",
     background: "linear-gradient(90deg, #ff5f6d 0%, #ffc371 100%)",
     color: "#fff",
     fontWeight: "600",
-    fontSize: "0.95rem",      // slightly smaller font
+    fontSize: "0.95rem",
     cursor: "pointer",
-    boxShadow: "0 1px 6px rgba(255,95,109,0.08)",
+    boxShadow: "0 2px 8px rgba(255,95,109,0.12)",
     transition: "background 0.15s, transform 0.08s",
+    minWidth: "120px",
+    textAlign: "center",
   },
-    // extra compact button for inline controls (Rate/Edit/Delete)
+
   smallButton: {
-    marginTop: "6px",
-    padding: "6px 10px",
+    padding: "8px 12px",
     borderRadius: "8px",
     border: "none",
     background: "linear-gradient(90deg, #ff5f6d 0%, #ffc371 100%)",
@@ -929,7 +1286,8 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: "8px",
+    gap: "12px",
+    flexWrap: "wrap",
   },
 };
 // ---------- MAIN APP ----------
@@ -951,10 +1309,7 @@ export default function App() {
 
   // Persist rating result + proofs into mines[] (localStorage)
   const handleRatingSubmit = (result) => {
-    console.log("handleRatingSubmit:", result);
-    setRatingResult(result);
-
-    // Prefer moduleScores returned by RatingPage (AI or manual). Fall back to recompute from answers.
+    // compute moduleScores if not provided
     const moduleScores = result.moduleScores && Object.keys(result.moduleScores).length
       ? result.moduleScores
       : (() => {
@@ -1005,11 +1360,52 @@ export default function App() {
       score,
       totalPoints: total,
       percentage: total ? ((score / total) * 100).toFixed(2) : null,
+      updatedAt: new Date().toISOString(),
     };
 
-    const mineId = selectedMine?.id ?? { name: result.mineName || "unknown", linNumber: result.linNumber };
-    const updatedMines = updateMineWithResult(mineId, fullResult);
-    setMines(updatedMines);
+    // Persist into mines[] in localStorage and state so data remains after refresh
+    const mineId = selectedMine?.id;
+    let updatedMines = [];
+
+    if (mineId) {
+      updatedMines = mines.map(m => {
+        if (m.id === mineId) {
+          // merge existing mine data and attach lastResult + scores
+          return {
+            ...m,
+            lastResult: fullResult,
+            scores: moduleScores,
+            // keep other fields intact
+          };
+        }
+        return m;
+      });
+    } else {
+      // create new mine entry (fallback)
+      const newMine = {
+        id: uuidv4(),
+        name: fullResult.mineName || "Unnamed Mine",
+        owner: fullResult.owner || "",
+        hectares: fullResult.hectares || "",
+        linNumber: fullResult.linNumber || "",
+        leaseDuration: fullResult.leaseDuration || "",
+        lastResult: fullResult,
+        scores: moduleScores,
+      };
+      updatedMines = [...mines, newMine];
+    }
+
+    // save and update state
+    try {
+      localStorage.setItem("mines", JSON.stringify(updatedMines));
+      setMines(updatedMines);
+    } catch (err) {
+      console.error("Failed to persist mines to localStorage", err);
+      toast.error("Saving result failed");
+    }
+
+    // set rating result so UI shows result
+    setRatingResult(fullResult);
   };
 
   if (!user) return <Login onLogin={setUser} />;
