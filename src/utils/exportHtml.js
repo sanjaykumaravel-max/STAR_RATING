@@ -26,7 +26,7 @@ export function buildReportHtml(mine = {}, result = {}) {
     .map(([k, f]) => `<tr><td style="padding:6px 8px;border:1px solid #eee">${k}</td><td style="padding:6px 8px;border:1px solid #eee">${f?.name || ""}</td></tr>`)
     .join("");
 
-  const logoSrc = "/logo.png"; // keep this path; inlineImages(...) will convert to data:URL if needed
+  const logoSrc = "/au-logo.png";
 
   return `<!doctype html>
 <html lang="en">

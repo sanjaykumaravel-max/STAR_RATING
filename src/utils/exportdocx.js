@@ -42,7 +42,7 @@ export async function exportDocx(mine = {}, result = {}, filename) {
 
   // Try to fetch logo and embed
   try {
-    const resp = await fetch("/logo.png");
+    const resp = await fetch("/au-logo.png");
     if (resp.ok) {
       const buffer = await resp.arrayBuffer();
       children.push(new Paragraph({ children: [ new ImageRun({ data: buffer, transformation: { width: 120, height: 120 } }) ] }));

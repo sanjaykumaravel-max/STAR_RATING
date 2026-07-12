@@ -10,7 +10,7 @@ export default function Login({ onLogin = () => {} }) {
 
   return (
     <div className="container app-container" style={{ textAlign: "center", maxWidth: 480 }}>
-      <img src="/logo.png" alt="logo" style={{ display: "block", margin: "12px auto", maxWidth: 120 }} />
+      <img src="/au-logo.png" alt="AU STAR logo" style={{ display: "block", margin: "12px auto", maxWidth: 120 }} />
       <h2>Sign in</h2>
       <form onSubmit={submit} style={{ marginTop: 12 }}>
         <label style={{ display: "block", marginBottom: 8, fontWeight: 600, textAlign: "left" }}>Your name</label>
