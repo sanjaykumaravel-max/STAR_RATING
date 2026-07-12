@@ -1,4 +1,4 @@
-import buildReportHtml from "./exportHtml";
+import { buildReportHtml } from "./exportHtml";
 
 /**
  * exportPdf: generates PDF using html2pdf.js and triggers download (or returns blob)
@@ -46,9 +46,13 @@ export async function exportPdf(mine = {}, result = {}, options = {}) {
       });
     });
 
-    let html2pdfModule;
+    let html2pdf;
     try {
-      html2pdfModule = (await import("html2pdf.js")).default || (await import("html2pdf.js"));
+      const module = await import("html2pdf.js");
+      html2pdf = module.default?.default || module.default || module;
+      if (typeof html2pdf !== "function") {
+        throw new TypeError("html2pdf.js did not provide an export function");
+      }
     } catch (err) {
       console.error("html2pdf import failed", err);
       return { ok: false, error: "html2pdf not installed" };
@@ -56,14 +60,14 @@ export async function exportPdf(mine = {}, result = {}, options = {}) {
 
     if (options.download === false) {
       // return blob
-      const blob = await html2pdfModule().from(container).set(opt).outputPdf("blob");
+      const blob = await html2pdf().from(container).set(opt).outputPdf("blob");
       setTimeout(() => container.remove(), 300);
       return { ok: true, blob };
     }
 
     await new Promise((resolve, reject) => {
       try {
-        html2pdfModule().from(container).set(opt).save().then(resolve).catch(reject);
+        html2pdf().from(container).set(opt).save().then(resolve).catch(reject);
       } catch (e) {
         reject(e);
       }
