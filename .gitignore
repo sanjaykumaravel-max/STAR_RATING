@@ -51,7 +51,6 @@ dist/
 server/.env
 .vscode/
 *.log
-package-lock.json
 
 # Optional npm cache directory
 .npm
