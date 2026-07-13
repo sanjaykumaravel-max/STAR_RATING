@@ -75,3 +75,18 @@ server/.env
 
 # Local Netlify folder
 .netlify
+
+# ==========================
+# Terraform
+# ==========================
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Terraform variable files
+*.tfvars
+*.tfvars.json
+
+# AWS Keys
+*.pem

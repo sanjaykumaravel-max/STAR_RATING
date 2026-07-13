@@ -1,0 +1,21 @@
+name: Star Rating CI
+
+on:
+  push:
+    branches:
+      - feature/ui-redesign-phase1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Display Information
+        run: |
+          echo "GitHub Actions is working successfully!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
