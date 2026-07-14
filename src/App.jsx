@@ -64,7 +64,7 @@ function Login({ onLogin }) {
   return (
     <div style={styles.container}>
       <img src="/au-logo.png" alt="AU STAR logo" style={styles.logo} />
-      <h2>AU STAR RATING</h2>
+      <h2>Granite Mine Intelligence</h2>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
