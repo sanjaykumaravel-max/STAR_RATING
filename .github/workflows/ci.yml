@@ -30,6 +30,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Verify Docker Hub secrets are available
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        run: |
+          if [ -z "$DOCKER_USERNAME" ]; then
+            echo "DOCKER_USERNAME is empty"
+            exit 1
+          fi
+
+          if [ -z "$DOCKER_TOKEN" ]; then
+            echo "DOCKER_TOKEN is empty"
+            exit 1
+          fi
+
+          echo "Docker Hub secrets are present."
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
