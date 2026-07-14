@@ -61,3 +61,19 @@ jobs:
           tags: |
             sanjaydev1417/star-rating-app:latest
             sanjaydev1417/star-rating-app:${{ github.sha }}
+
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull sanjaydev1417/star-rating-app:latest
+            docker stop star-rating || true
+            docker rm star-rating || true
+            docker run -d \
+              --name star-rating \
+              --restart unless-stopped \
+              -p 80:80 \
+              sanjaydev1417/star-rating-app:latest
