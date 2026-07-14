@@ -77,3 +77,42 @@ jobs:
               --restart unless-stopped \
               -p 80:80 \
               sanjaydev1417/star-rating-app:latest
+
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Running containers:"
+            docker ps
+
+            echo "Checking Star Rating container..."
+
+            docker ps --filter "name=star-rating"
+
+            STATUS="$(docker inspect star-rating --format='{{.State.Status}}')"
+            echo "Container Status: $STATUS"
+
+            if [ "$STATUS" != "running" ]; then
+              echo "star-rating is not running."
+              exit 1
+            fi
+
+      - name: Health Check
+        run: |
+          sleep 15
+
+          curl --fail http://${{ secrets.EC2_HOST }}
+
+          echo "Application is reachable."
+
+      - name: Cleanup Old Docker Images
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker image prune -af
