@@ -1,0 +1,7 @@
+# Copy this file to terraform.tfvars and replace every placeholder.
+# Do not commit terraform.tfvars because it may contain environment-specific values.
+
+aws_region    = "ap-south-1"
+instance_type = "t2.micro"
+key_pair_name = "your-key-pair-name"
+ami_id        = "ami-xxxxxxxxxxxxxxxxx"

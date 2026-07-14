@@ -50,6 +50,9 @@ dist/
 .env
 server/.env
 .vscode/
+.idea/
+*.swp
+*.swo
 *.log
 
 # Optional npm cache directory
@@ -76,13 +79,24 @@ server/.env
 # Local Netlify folder
 .netlify
 
+# Docker developer overrides
+docker-compose.override.yml
+
+# Local build and tooling artifacts
+.cache/
+tmp/
+temp/
+
+# Test artifacts
+playwright-report/
+test-results/
+
 # ==========================
 # Terraform
 # ==========================
 **/.terraform/*
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
 
 # Terraform variable files
 *.tfvars
@@ -90,3 +104,8 @@ server/.env
 
 # AWS Keys
 *.pem
+
+# SSH Keys
+*.ppk
+id_rsa
+id_rsa.pub
