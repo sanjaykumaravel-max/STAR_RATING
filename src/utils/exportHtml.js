@@ -15,15 +15,15 @@ export function buildReportHtml(mine = {}, result = {}) {
   const date = new Date().toLocaleString();
 
   const moduleRows = Object.entries(moduleScores || {})
-    .map(([k, v]) => `<tr><td style="padding:6px 8px;border:1px solid #eee">${k}</td><td style="padding:6px 8px;border:1px solid #eee;text-align:center">${v}</td></tr>`)
+    .map(([k, v]) => `<tr><td style="padding:6px 8px;border:1px solid #eee">${escapeHtml(k)}</td><td style="padding:6px 8px;border:1px solid #eee;text-align:center">${escapeHtml(String(v))}</td></tr>`)
     .join("");
 
   const answerRows = Object.entries(answers || {})
-    .map(([k, v]) => `<tr><td style="padding:6px 8px;border:1px solid #eee">${k}</td><td style="padding:6px 8px;border:1px solid #eee">${String(v)}</td></tr>`)
+    .map(([k, v]) => `<tr><td style="padding:6px 8px;border:1px solid #eee">${escapeHtml(k)}</td><td style="padding:6px 8px;border:1px solid #eee">${escapeHtml(String(v))}</td></tr>`)
     .join("");
 
   const proofRows = Object.entries(proofs || {})
-    .map(([k, f]) => `<tr><td style="padding:6px 8px;border:1px solid #eee">${k}</td><td style="padding:6px 8px;border:1px solid #eee">${f?.name || ""}</td></tr>`)
+    .map(([k, f]) => `<tr><td style="padding:6px 8px;border:1px solid #eee">${escapeHtml(k)}</td><td style="padding:6px 8px;border:1px solid #eee">${escapeHtml(f?.name || "")}</td></tr>`)
     .join("");
 
   const logoSrc = "/au-logo.png";
