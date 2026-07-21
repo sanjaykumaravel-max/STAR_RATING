@@ -1,5 +1,48 @@
+# Node
 node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
 dist
+coverage
+
+# Git and CI metadata
 .git
+.github
+
+# IDE
+.vscode
+.idea
+
+# Terraform local state and variables
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/terraform.tfvars
+infra/*.tfvars.json
+
+# Documentation
+docs
+
+# Android and legacy nested project
 android
 StarRatingApp
+
+# Local environment files
+.env
+.env.*
+
+# Private SSH key files
+*.pem
+*.ppk
+id_rsa
+id_rsa.pub
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
